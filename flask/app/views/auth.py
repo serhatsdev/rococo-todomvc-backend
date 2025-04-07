@@ -24,11 +24,13 @@ class Signup(Resource):
         {'type': 'object', 'properties': {
             'first_name': {'type': 'string'},
             'last_name': {'type': 'string'},
-            'email_address': {'type': 'string'}
+            'email_address': {'type': 'string'},
+            'password': {'type': 'string'},
+            'confirm_password': {'type': 'string'}
         }}
     )
     def post(self):
-        parsed_body = parse_request_body(request, ['first_name', 'last_name', 'email_address'])
+        parsed_body = parse_request_body(request, ['first_name', 'last_name', 'email_address', 'password', 'confirm_password'])
         validate_required_fields(parsed_body)
 
         auth_service = AuthService(config)
@@ -36,7 +38,9 @@ class Signup(Resource):
         auth_service.signup(
             parsed_body['email_address'],
             parsed_body['first_name'],
-            parsed_body['last_name']
+            parsed_body['last_name'],
+            parsed_body['password'],
+            parsed_body['confirm_password']
         )
         return get_success_response(message="User signed up successfully and verification email is sent.")
 

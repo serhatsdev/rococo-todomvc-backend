@@ -32,20 +32,21 @@ class AuthService:
         self.message_sender = MessageSender()
         
 
-    def signup(self, email, first_name, last_name):
-        login_method = LoginMethod(
-            method_type=LoginMethodType.EMAIL_PASSWORD,
-            raw_password=self.config.DEFAULT_USER_PASSWORD
-        )
+    def signup(self, email, first_name, last_name, password, confirm_password):
+        if password != confirm_password:
+            raise InputValidationError("Passwords do not match.")
 
         existing_email = self.email_service.get_email_by_email_address(email)
         if existing_email:
             raise InputValidationError("The email address you provided is already registered.")
-
+        
         person = Person(first_name=first_name, last_name=last_name)
-
         email = Email(person_id=person.entity_id, email=email)
 
+        login_method = LoginMethod(
+            method_type=LoginMethodType.EMAIL_PASSWORD,
+            raw_password=password
+        )
         login_method.person_id = person.entity_id
         login_method.email_id = email.entity_id
 

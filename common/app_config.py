@@ -49,14 +49,6 @@ class Config(BaseConfig):
     QUEUE_NAME_PREFIX: str = Field(env='QUEUE_NAME_PREFIX', default='')
     EMAIL_SERVICE_PROCESSOR_QUEUE_NAME: str = Field(env='EmailServiceProcessor_QUEUE_NAME', default='email-transmitter')
 
-    @property
-    def DEFAULT_USER_PASSWORD(self):
-        import random, string
-        if self.APP_ENV == "production":
-            return ''.join(random.choices(string.ascii_letters + string.digits, k=12))
-        else:
-            return 'Default@Password123'
-
 def get_config() -> Config:
     conf = Config()
     return conf
