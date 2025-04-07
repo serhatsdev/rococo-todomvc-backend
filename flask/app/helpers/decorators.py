@@ -7,9 +7,9 @@ from inspect import signature
 from common.app_logger import logger
 from common.app_config import config
 
+from common.models.person_organization_role import PersonOrganizationRoleEnum
 from common.services.email import EmailService
 from common.services.person import PersonService
-from common.services.auth import AuthService
 from common.services.auth import AuthService
 from common.services import OrganizationService, PersonOrganizationRoleService
 
@@ -129,7 +129,7 @@ def has_role(*allowed_roles):
         def wrapper(*args, **kwargs):
             agency_organization_id = kwargs.get("agency_organization_id")
 
-            person_organization_service = PorService(config)
+            person_organization_service = PersonOrganizationRoleService(config)
             # Retrieve all roles for the user
             user_roles = person_organization_service.get_all_by_person_id(person_id=g.person_id)
             roles_list = [role.role for role in user_roles]
