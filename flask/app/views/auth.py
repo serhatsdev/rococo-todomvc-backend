@@ -86,6 +86,14 @@ class ForgotPassword(Resource):
         return get_success_response(message="Password reset email sent successfully.")
 
 
+@auth_api.route('/verify_email/<string:token>/<string:uidb64>', doc=dict(description="Verify email"))
+class VerifyEmail(Resource):
+    def post(self, token, uidb64):
+        auth_service = AuthService(config)
+        auth_service.verify_email(token, uidb64)
+        return get_success_response(message="Email verified successfully.")
+
+
 @auth_api.route(
     '/reset_password/<string:token>/<string:uidb64>',
     doc=dict(description="Update the password using reset password link")
