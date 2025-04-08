@@ -97,10 +97,13 @@ class AuthService:
         if not email_obj:
             raise InputValidationError("Email is not registered.")
         
+        if not email_obj.is_verified:
+            raise InputValidationError("Email is not verified.")
+
         login_method = self.login_method_service.get_login_method_by_email_id(email_obj.entity_id)
         if not check_password_hash(login_method.password, password):
             raise InputValidationError('Incorrect email or password.')
-        
+
         access_token, expiry = self.generate_access_token(login_method)
 
         return access_token, expiry
