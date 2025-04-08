@@ -69,35 +69,22 @@ class AuthService:
         self.send_welcome_email(login_method, person, email.email)
 
 
-    def generate_reset_password_token(self, login_method: LoginMethod, email: str):
-        person_id, email_id = login_method.person_id, login_method.email_id
-        token = jwt.encode(
-            {
-                'email': email,
-                'email_id': email_id,
-                'person_id': person_id,
-                'exp': time.time() + int(self.config.RESET_TOKEN_EXPIRE),
-            },
-            login_method.password,
-            algorithm='HS256'
-        )
-        return token
-
-
     def prepare_password_reset_url(self, login_method: LoginMethod, email: str):
-        token = self.generate_reset_password_token(login_method, email)
-        uid = urlsafe_base64_encode(force_bytes(login_method.entity_id))
+        token, uid = self.generate_email_token(login_method, email, 'reset_password')
         password_reset_url = self.config.VUE_APP_URI + "/set-password/" + token + "/" + uid
         return password_reset_url
 
+    def prepare_email_verification_url(self, login_method: LoginMethod, email: str):
+        token, uid = self.generate_email_token(login_method, email, 'email_verification')
+        email_verification_url = self.config.VUE_APP_URI + "/verify-email/" + token + "/" + uid
+        return email_verification_url
 
     def send_welcome_email(self, login_method: LoginMethod, person: Person, email: str):
-        if confirmation_link := self.prepare_password_reset_url(login_method, email):
+        if confirmation_link := self.prepare_email_verification_url(login_method, email):
             message = {
                 "event": "WELCOME_EMAIL",
                 "data": {
-                    "confirmation_link": confirmation_link,
-                    "recipient_name": f"{person.first_name} {person.last_name}".strip(),
+                    "verify_link": confirmation_link,
                 },
                 "to_emails": [email],
             }
@@ -117,6 +104,24 @@ class AuthService:
         access_token, expiry = self.generate_access_token(login_method)
 
         return access_token, expiry
+
+
+    def generate_email_token(self, login_method: LoginMethod, email: str, context: str):
+        person_id, email_id = login_method.person_id, login_method.email_id
+        token = jwt.encode(
+            {
+                'context': context,
+                'email': email,
+                'email_id': email_id,
+                'person_id': person_id,
+                'exp': time.time() + int(self.config.RESET_TOKEN_EXPIRE),
+            },
+            login_method.password,
+            algorithm='HS256'
+        )
+
+        uid = urlsafe_base64_encode(force_bytes(login_method.entity_id))
+        return token, uid
 
     def generate_access_token(self, login_method: LoginMethod) -> str:
         expiry = time.time() + int(self.config.ACCESS_TOKEN_EXPIRE)
@@ -145,7 +150,7 @@ class AuthService:
             return
 
     @staticmethod
-    def parse_reset_password_token(token, login_method: LoginMethod):
+    def parse_email_token(token, login_method: LoginMethod):
         try:
             decoded = jwt.decode(token, login_method.password, algorithms=['HS256'])
             exp_time = decoded['exp']
@@ -175,7 +180,7 @@ class AuthService:
             message = {
                 "event": "RESET_PASSWORD",
                 "data": {
-                    "reset_password_link": password_reset_url
+                    "verify_link": password_reset_url
                 },
                 "to_emails": [email],
             }
@@ -195,9 +200,9 @@ class AuthService:
         if not login_method:
             raise APIException("Invalid password reset URL.")
         
-        parsed_token = self.parse_reset_password_token(token, login_method)
+        parsed_token = self.parse_email_token(token, login_method)
 
-        if not parsed_token:
+        if not parsed_token or parsed_token.get('context') != 'reset_password':
             raise APIException("Invalid reset password token.")
         
         email_obj = self.email_service.get_email_by_id(parsed_token['email_id'])
@@ -214,3 +219,19 @@ class AuthService:
 
         access_token, expiry = self.generate_access_token(login_method)
         return access_token, expiry, person_obj
+    
+    def verify_email(self, token: str, uidb64: str):
+        login_method_id = force_str(urlsafe_base64_decode(uidb64))
+        login_method = self.login_method_service.get_login_method_by_id(login_method_id)
+        if not login_method:
+            raise APIException("Invalid email verification URL.")
+        
+        parsed_token = self.parse_email_token(token, login_method)
+        if not parsed_token or parsed_token.get('context') != 'email_verification':
+            raise APIException("Invalid email verification token.")
+        
+        email_obj = self.email_service.get_email_by_id(parsed_token['email_id'])
+        if not email_obj:
+            raise APIException("Email not found.")
+        
+        return self.email_service.verify_email(email_obj)
