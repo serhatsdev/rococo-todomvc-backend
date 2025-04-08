@@ -75,7 +75,7 @@ class TodoService:
         :param person_id: ID of the person
         :return: List of Todo objects
         """
-        return self.todo_repo.get_many({"person_id": person_id})
+        return self.todo_repo.get_many({"person_id": person_id}, sort=[("created_on", 'asc')])
 
     def get_completed_todos(self, person_id: str = None) -> list[Todo]:
         """
