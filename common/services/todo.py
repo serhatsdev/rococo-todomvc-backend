@@ -48,6 +48,23 @@ class TodoService:
             self.todo_repo.save(todo)
         return todo
 
+    def update_todo_by_id(self, entity_id: str, title: str, is_completed: bool) -> Todo:
+        """
+        Update a todo item.
+
+        :param entity_id: ID of the todo
+        :param title: New title for the todo
+        :param is_completed: New completion status for the todo
+        :return: Updated Todo object
+        """
+        todo = self.get_todo_by_id(entity_id)
+        if not todo:
+            raise InputValidationError("Todo not found")
+        todo.title = title
+        todo.is_completed = is_completed
+        self.todo_repo.save(todo)
+        return todo
+
     def delete_todo_by_id(self, entity_id: str) -> None:
         self.todo_repo.delete(entity_id)
 

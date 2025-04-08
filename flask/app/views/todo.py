@@ -97,6 +97,37 @@ class TodoItem(Resource):
         return get_success_response(todo=todo.as_dict())
 
     @login_required()
+    @todo_api.expect(
+        {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string"},
+                "is_completed": {"type": "boolean"},
+            },
+        }
+    )
+    def patch(self, todo_id, person):
+        """Update a specific todo."""
+        parsed_body = parse_request_body(request, ["title", "is_completed"])
+        validate_required_fields({"title": parsed_body["title"]})
+
+        todo_service = TodoService(config)
+        todo = todo_service.get_todo_by_id(todo_id)
+
+        if not todo or todo.person_id != person.entity_id:
+            return get_failure_response("Todo not found", status_code=404)
+
+        updated_todo = todo_service.update_todo_by_id(
+            entity_id=todo_id,
+            title=parsed_body["title"],
+            is_completed=parsed_body["is_completed"],
+        )
+        return get_success_response(
+            todo=updated_todo.as_dict(), message="Todo updated successfully."
+        )
+        
+
+    @login_required()
     def delete(self, todo_id, person):
         """Delete a todo."""
         todo_service = TodoService(config)
@@ -105,7 +136,7 @@ class TodoItem(Resource):
         if not todo or todo.person_id != person.entity_id:
             return get_failure_response("Todo not found", status_code=404)
 
-        todo_service.delete_todo(todo)
+        todo_service.delete_todo_by_id(todo)
         return get_success_response(message="Todo deleted successfully.")
 
 
@@ -125,3 +156,4 @@ class TodoToggle(Resource):
             todo=updated_todo.as_dict(),
             message=f"Todo marked as {'completed' if updated_todo.is_completed else 'active'}.",
         )
+
